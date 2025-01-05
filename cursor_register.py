@@ -15,11 +15,19 @@ CURSOR_SIGN_UP_URL =  "https://authenticator.cursor.sh/sign-up"
 CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
 
 def cursor_turnstile(tab):
-    if tab.wait.eles_loaded("@id=cf-turnstile", timeout=60, any_one = True):
-        challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
-        challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=60).ele("tag:body").sr("xpath=//input[@type='checkbox']")
-        challenge_shadow_button.click()
-    tab.wait.load_start()
+    try:
+        while True:
+            try:
+                challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
+                challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=60).ele("tag:body").sr("xpath=//input[@type='checkbox']")
+                if challenge_shadow_button:
+                    challenge_shadow_button.click()
+                    tab.wait.load_start()
+                    return
+            except:
+                pass
+    except Exception as e:
+        print(e)
 
 def sign_up(browser):
     
@@ -35,6 +43,7 @@ def sign_up(browser):
     first_name, last_name = fake.name().split(' ')[0:2]
 
     tab = browser.new_tab(CURSOR_SIGN_UP_URL)
+    browser.wait(0.5, 1.5)
 
     try:
         tab.ele("@name=first_name").input(first_name)
@@ -44,36 +53,40 @@ def sign_up(browser):
     except Exception as e:
         print(e)
         return empty_return
+    browser.wait(0.5, 1.5)
 
     try:
-        cursor_turnstile(tab)            
+        cursor_turnstile(tab)
     except Exception as e:
         print(e)
         return empty_return
-    
+    browser.wait(0.5, 1.5)
+
     try:
         tab.ele('@name=password').input(password)
         tab.ele('@type=submit').click()
     except Exception as e:
         return empty_return
+    browser.wait(0.5, 1.5)
 
     if tab.ele('This email is not available.'):
         print('This email is not available.')
         return empty_return
 
     try:
-        cursor_turnstile(tab)            
+        cursor_turnstile(tab)
     except Exception as e:
         print(e)
         return empty_return
-    
-    message = temp_email.wait_for_message()
+    browser.wait(0.5, 1.5)
+
+    message = temp_email.wait_for_message(timeout=120)
     message_text = message.body.strip().replace('\n', '').replace('\r', '').replace('=', '')
     verify_code = re.search(r'Your verification code is (\d+)', message_text).group(1).strip()
 
     try:
         for idx, digit in enumerate(verify_code, start = 0):
-            tab.ele(f'@data-index={idx}').input(digit)
+            tab.ele(f'@data-index={idx}', timeout=30).input(digit)
             browser.wait(0.1, 0.3)
     except Exception as e:
         print(e)
@@ -83,6 +96,7 @@ def sign_up(browser):
     except Exception as e:
         print(e)
         return empty_return
+    browser.wait(0.5, 1.5)
     
     cookies = tab.cookies().as_dict()
     token = cookies.get('WorkosCursorSessionToken', None)
@@ -115,11 +129,8 @@ def register_cursor(number):
     with concurrent.futures.ThreadPoolExecutor(max_workers = max_workers) as executor:
         futures = [executor.submit(sign_up, browser) for i in range(number)]
         for future in concurrent.futures.as_completed(futures):
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception as e:
-                print(f"Task generated an exception: {e}")
+            result = future.result()
+            results.append(result)
     results = [result for result in results if result["token"] is not None]
 
     browser.quit()
@@ -131,7 +142,6 @@ def register_cursor(number):
 
         csv_file = f"./output_{formatted_date}.csv"
         token_file = f"./token_{formatted_date}.csv"
-
 
         fieldnames = results[0].keys()
 
