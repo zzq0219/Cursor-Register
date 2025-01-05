@@ -17,11 +17,13 @@ CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
 def cursor_turnstile(tab):
     if tab.wait.eles_loaded("@id=cf-turnstile", timeout=60, any_one = True):
         challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
-        challenge_shadow_button = challenge_shadow_root.ele("tag:iframe").ele("tag:body").sr("xpath=//input[@type='checkbox']")
+        challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=60).ele("tag:body").sr("xpath=//input[@type='checkbox']")
         challenge_shadow_button.click()
     tab.wait.load_start()
 
 def sign_up(browser):
+    
+    empty_return = {'username': None, 'password': None, 'token': None}
 
     # Get temp email address
     temp_email = EMail()
@@ -41,22 +43,30 @@ def sign_up(browser):
         tab.ele("@type=submit").click()
     except Exception as e:
         print(e)
-        return False
+        return empty_return
 
-    cursor_turnstile(tab)            
-
+    try:
+        cursor_turnstile(tab)            
+    except Exception as e:
+        print(e)
+        return empty_return
+    
     try:
         tab.ele('@name=password').input(password)
         tab.ele('@type=submit').click()
     except Exception as e:
-        return False
+        return empty_return
 
     if tab.ele('This email is not available.'):
         print('This email is not available.')
-        return False
+        return empty_return
 
-    cursor_turnstile(tab)
-
+    try:
+        cursor_turnstile(tab)            
+    except Exception as e:
+        print(e)
+        return empty_return
+    
     message = temp_email.wait_for_message()
     message_text = message.body.strip().replace('\n', '').replace('\r', '').replace('=', '')
     verify_code = re.search(r'Your verification code is (\d+)', message_text).group(1).strip()
@@ -64,18 +74,24 @@ def sign_up(browser):
     try:
         for idx, digit in enumerate(verify_code, start = 0):
             tab.ele(f'@data-index={idx}').input(digit)
-            time.sleep(random.uniform(0.1,0.3))
+            browser.wait(0.1, 0.3)
     except Exception as e:
         print(e)
 
-    cursor_turnstile(tab)
-
+    try:
+        cursor_turnstile(tab)            
+    except Exception as e:
+        print(e)
+        return empty_return
+    
     cookies = tab.cookies().as_dict()
     token = cookies.get('WorkosCursorSessionToken', None)
+
+    tab.close()
+
     print("Cursor Email: " + email)
     print("Cursor Password: " + password)
     print("Cursor Token: " + token)
-
     return {
         'username': email,
         'password': password,
@@ -92,21 +108,18 @@ def register_cursor(number):
 
     # Use turnstilePatch from https://github.com/TheFalloutOf76/CDP-bug-MouseEvent-.screenX-.screenY-patcher
     options.add_extension("turnstilePatch")
+    browser = Chromium(options)
 
-    broswers = [Chromium(options) for i in range(number)]
     # Run the code using multithreading
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers = max_workers) as executor:
-        futures = [executor.submit(sign_up, broswer) for broswer in broswers]
+        futures = [executor.submit(sign_up, browser) for i in range(number)]
         for future in concurrent.futures.as_completed(futures):
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception as e:
-                print(f"Task generated an exception: {e}")
+            print(future.result())
+            result = future.result()
+            results.append(result)
 
-    for broswer in broswers:
-        broswer.quit()
+    browser.quit()
 
     print(results)
     if len(results)>0:
@@ -114,6 +127,8 @@ def register_cursor(number):
 
         csv_file = f"./output_{formatted_date}.csv"
         token_file = f"./token_{formatted_date}.csv"
+
+        results = [result for result in results if result["token"] is not None]
 
         fieldnames = results[0].keys()
 
@@ -141,4 +156,3 @@ if __name__ == "__main__":
     number = args.number
 
     register_cursor(number)
-
