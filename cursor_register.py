@@ -120,18 +120,18 @@ def register_cursor(number):
                 results.append(result)
             except Exception as e:
                 print(f"Task generated an exception: {e}")
+    results = [result for result in results if result["token"] is not None]
 
     browser.quit()
 
     print(results)
-
+    
     if len(results)>0:
         formatted_date = datetime.now().strftime("%Y-%m-%d")
 
         csv_file = f"./output_{formatted_date}.csv"
         token_file = f"./token_{formatted_date}.csv"
 
-        results = [result for result in results if result["token"] is not None]
 
         fieldnames = results[0].keys()
 
