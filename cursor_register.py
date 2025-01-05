@@ -115,13 +115,16 @@ def register_cursor(number):
     with concurrent.futures.ThreadPoolExecutor(max_workers = max_workers) as executor:
         futures = [executor.submit(sign_up, browser) for i in range(number)]
         for future in concurrent.futures.as_completed(futures):
-            print(future.result())
-            result = future.result()
-            results.append(result)
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                print(f"Task generated an exception: {e}")
 
     browser.quit()
 
     print(results)
+
     if len(results)>0:
         formatted_date = datetime.now().strftime("%Y-%m-%d")
 
