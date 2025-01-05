@@ -15,7 +15,7 @@ pip install requirements.txt
 The code does not support run with headless mode now. Please run the code in Windows platform with UI.
 
 ```
-python cursor_register.py
+python cursor_register.py --number 10
 ```
 
 ## To do
