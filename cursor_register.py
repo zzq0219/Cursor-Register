@@ -15,19 +15,13 @@ CURSOR_SIGN_UP_URL =  "https://authenticator.cursor.sh/sign-up"
 CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
 
 def cursor_turnstile(tab):
-    try:
-        while True:
-            try:
-                challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
-                challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=60).ele("tag:body").sr("xpath=//input[@type='checkbox']")
-                if challenge_shadow_button:
-                    challenge_shadow_button.click()
-                    tab.wait.load_start()
-                    return
-            except:
-                pass
-    except Exception as e:
-        print(e)
+    for i in range(5): # Retry times
+        challenge_shadow_root = tab.ele('@id=cf-turnstile', timeout=30).child().shadow_root
+        challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=30).ele("tag:body").sr("xpath=//input[@type='checkbox']")
+        if challenge_shadow_button:
+            challenge_shadow_button.click()
+            tab.wait.load_start()
+            return
 
 def sign_up(browser):
     
