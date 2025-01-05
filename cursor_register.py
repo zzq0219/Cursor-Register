@@ -21,7 +21,7 @@ def cursor_turnstile(tab):
         if challenge_shadow_button:
             challenge_shadow_button.click()
             tab.wait.load_start()
-            return
+            break
 
 def sign_up(browser):
     
