@@ -4,8 +4,8 @@ import csv
 import time
 import random
 import argparse
-import threading
 import concurrent.futures
+from datetime import datetime
 from faker import Faker
 from tempmail import EMail
 from DrissionPage import ChromiumOptions, Chromium
@@ -88,7 +88,7 @@ def register_cursor(number):
 
     options = ChromiumOptions()
     options.auto_port()
-    options.headless()
+    #options.headless()
 
     # Use turnstilePatch from https://github.com/TheFalloutOf76/CDP-bug-MouseEvent-.screenX-.screenY-patcher
     options.add_extension("turnstilePatch")
@@ -109,9 +109,10 @@ def register_cursor(number):
         broswer.quit()
 
     print(results)
+    formatted_date = datetime.now().strftime("%Y-%m-%d")
 
-    csv_file = "./output.csv"
-    token_file = "./token.csv"
+    csv_file = f"./output_{formatted_date}.csv"
+    token_file = f"./token_{formatted_date}.csv"
 
     fieldnames = results[0].keys()
 
@@ -127,7 +128,6 @@ def register_cursor(number):
     with open(token_file, 'a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=[selected_column])
         writer.writerows(selected_data)
-
 
 if __name__ == "__main__":
 
