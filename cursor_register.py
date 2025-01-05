@@ -94,7 +94,6 @@ def sign_up(browser):
     
     cookies = tab.cookies().as_dict()
     token = cookies.get('WorkosCursorSessionToken', None)
-
     tab.close()
 
     print("Cursor Email: " + email)
@@ -106,10 +105,7 @@ def sign_up(browser):
         'token': token
     }
 
-def register_cursor(number, use_oneapi, oneapi_url, oneapi_token):
-
-    max_workers = 5
-
+def register_cursor(number, max_workers):
     options = ChromiumOptions()
     options.auto_port()
     #options.headless()
@@ -126,11 +122,9 @@ def register_cursor(number, use_oneapi, oneapi_url, oneapi_token):
             result = future.result()
             results.append(result)
     results = [result for result in results if result["token"] is not None]
-
     browser.quit()
 
     print(results)
-    
     if len(results)>0:
         formatted_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -153,11 +147,11 @@ def register_cursor(number, use_oneapi, oneapi_url, oneapi_token):
 
     return results
 
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Cursor Registor')
     parser.add_argument('--number', type=int, default=2, help="How many account you want")
+    parser.add_argument('--max_workers', type=int, default=1, help="How many workers in multithreading")
     
     # The parameters with name starts with oneapi are used to uploead the cookie token to one-api, new-api, chat-api server.
     parser.add_argument('--oneapi', action='store_true', help='Enable One-API or not')
@@ -167,13 +161,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     number = args.number
+    max_workers = args.max_workers
     use_oneapi = args.oneapi
     oneapi_url = args.oneapi_url
     oneapi_token = args.oneapi_token
     oneapi_channel_url = args.oneapi_channel_url
 
-    account_infos = register_cursor(number, use_oneapi, oneapi_url, oneapi_token)
-
+    account_infos = register_cursor(number, max_workers)
+    print(f"Register {len(account_infos)} Accounts Successfully")
+    
     if use_oneapi:
         from tokenManager.oneapi_manager import OneAPIManager
         oneapi = OneAPIManager(oneapi_url, oneapi_token)
