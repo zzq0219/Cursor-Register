@@ -6,7 +6,6 @@ import random
 import argparse
 import threading
 import concurrent.futures
-from datetime import datetime
 from faker import Faker
 from tempmail import EMail
 from DrissionPage import ChromiumOptions, Chromium
@@ -16,7 +15,7 @@ CURSOR_SIGN_UP_URL =  "https://authenticator.cursor.sh/sign-up"
 CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
 
 def cursor_turnstile(tab):
-    if tab.wait.eles_loaded("@id=cf-turnstile", timeout=60, any_one=True):
+    if tab.wait.eles_loaded("@id=cf-turnstile", timeout=60, any_one = True):
         challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
         challenge_shadow_button = challenge_shadow_root.ele("tag:iframe").ele("tag:body").sr("xpath=//input[@type='checkbox']")
         challenge_shadow_button.click()
@@ -47,14 +46,11 @@ def sign_up(browser):
     cursor_turnstile(tab)            
 
     try:
-        if tab.ele('@name=password'):
-            tab.ele('@name=password').input(password)
-            time.sleep(random.uniform(1,3))
-            tab.ele('@type=submit').click()
+        tab.ele('@name=password').input(password)
+        tab.ele('@type=submit').click()
     except Exception as e:
         return False
 
-    time.sleep(random.uniform(1,3))
     if tab.ele('This email is not available.'):
         print('This email is not available.')
         return False
@@ -92,8 +88,8 @@ def register_cursor(number):
 
     options = ChromiumOptions()
     options.auto_port()
-    # Headless mode may not work. Better not to use it.
-    #options.headless()   
+    options.headless()
+
     # Use turnstilePatch from https://github.com/TheFalloutOf76/CDP-bug-MouseEvent-.screenX-.screenY-patcher
     options.add_extension("turnstilePatch")
 
@@ -114,12 +110,11 @@ def register_cursor(number):
 
     print(results)
 
-    # Write data into csv file
-    formatted_date = datetime.now().strftime("%Y-%m-%d")
-    csv_file = f"./output_{formatted_date}.csv"
-    token_file = f"./token_{formatted_date}.csv"
+    csv_file = "./output.csv"
+    token_file = "./token.csv"
 
     fieldnames = results[0].keys()
+
     # Write username, password, token into a csv file
     with open(csv_file, 'a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -132,6 +127,7 @@ def register_cursor(number):
     with open(token_file, 'a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=[selected_column])
         writer.writerows(selected_data)
+
 
 if __name__ == "__main__":
 
