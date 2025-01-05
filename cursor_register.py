@@ -32,7 +32,7 @@ def sign_up(browser):
     # Get password and name by faker
     fake = Faker()
     password = fake.password(length=12, special_chars=True, digits=True, upper_case=True, lower_case=True)
-    first_name, last_name = fake.name().split(' ')
+    first_name, last_name = fake.name().split(' ')[0:2]
 
     tab = browser.new_tab(CURSOR_SIGN_UP_URL)
 
@@ -144,7 +144,6 @@ def register_cursor(number):
         with open(token_file, 'a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=[selected_column])
             writer.writerows(selected_data)
-
 
 if __name__ == "__main__":
 
