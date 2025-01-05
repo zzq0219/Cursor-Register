@@ -109,25 +109,27 @@ def register_cursor(number):
         broswer.quit()
 
     print(results)
-    formatted_date = datetime.now().strftime("%Y-%m-%d")
+    if len(results)>0:
+        formatted_date = datetime.now().strftime("%Y-%m-%d")
 
-    csv_file = f"./output_{formatted_date}.csv"
-    token_file = f"./token_{formatted_date}.csv"
+        csv_file = f"./output_{formatted_date}.csv"
+        token_file = f"./token_{formatted_date}.csv"
 
-    fieldnames = results[0].keys()
+        fieldnames = results[0].keys()
 
-    # Write username, password, token into a csv file
-    with open(csv_file, 'a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        if not os.path.isfile(csv_file): writer.writeheader()
-        writer.writerows(results)
+        # Write username, password, token into a csv file
+        with open(csv_file, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            if not os.path.isfile(csv_file): writer.writeheader()
+            writer.writerows(results)
 
-    # Only write token to csv file, without header
-    selected_column = 'token'
-    selected_data = [{selected_column: row[selected_column]} for row in results]
-    with open(token_file, 'a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=[selected_column])
-        writer.writerows(selected_data)
+        # Only write token to csv file, without header
+        selected_column = 'token'
+        selected_data = [{selected_column: row[selected_column]} for row in results]
+        with open(token_file, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=[selected_column])
+            writer.writerows(selected_data)
+
 
 if __name__ == "__main__":
 
@@ -139,3 +141,4 @@ if __name__ == "__main__":
     number = args.number
 
     register_cursor(number)
+
