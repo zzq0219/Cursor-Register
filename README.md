@@ -32,7 +32,7 @@ python cursor_register.py --oneapi_url {oneapi_url} --oneapi_token {oneapi_token
 
 ### Register accounts. Download account info and cookie token from Github Artifact.
 
-If you want to use the token directly or your OneAPI does not have a public IP, you can manually download token.csv after running the GitHub Action pipeline.
+If you want to use the token directly or your OneAPI does not have a public IP, you can manually download token.csv after running the GitHub Action pipeline. **Do not forget to delete the artifact after you download it to avoid data leakage.**
 
 Please run the Github Action pipeline with the following parameter:
 - `number`: The account number you want to register.
