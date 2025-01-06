@@ -169,7 +169,7 @@ if __name__ == "__main__":
     account_infos = register_cursor(number, max_workers)
     print(f"Register {len(account_infos)} Accounts Successfully")
     
-    if use_oneapi:
+    if use_oneapi and len(account_infos)>0:
         from tokenManager.oneapi_manager import OneAPIManager
         oneapi = OneAPIManager(oneapi_url, oneapi_token)
         oneapi.add_channel("Cursor", 
