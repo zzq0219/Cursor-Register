@@ -30,10 +30,13 @@ python cursor_register.py --oneapi_url {oneapi_url} --oneapi_token {oneapi_token
 
 ### [Github Action] Register accounts. Upload the account cookie token into [One-API](https://github.com/songquanpeng/one-api)
 
-To run the register in Github Action and ingest the account cookie into ONE API, you need to add the following secret in your repo:
+To run the register in Github Action and ingest the account cookie into ONE API, you need to add the following secret in your repo. 
+
 - `CURSOR_ONEAPI_URL`: For parameter `oneapi_url`
 - `CURSOR_ONEAPI_TOKEN`: For parameter `oneapi_token`
 - `CURSOR_CHANNEL_URL`: For parameter `oneapi_channel_url` 
+
+If you are new to Github Action. you can add the secret following [Security Guides](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) 
 
 (Not sure why `max_workers > 1` does not work in Github Action environment)
 
