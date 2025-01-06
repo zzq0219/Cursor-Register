@@ -2,6 +2,9 @@
 
 Automatically register a Cursor account and save the account name, password, and token.
 
+Poor network environment has a huge impact on this project. If the registration success rate is low, please consider using a proxy or other network. We provide Github Action pipeline for trial use.
+（较差的网络环境对本项目影响巨大，如果注册成功率较低，请考虑使用代理或者使用其他网络，本项目提供Github Action pipeline以供试用）
+
 ## Run in local
 
 ### Install dependency
@@ -28,11 +31,19 @@ python cursor_register.py --oneapi_url {oneapi_url} --oneapi_token {oneapi_token
 - `oneapi_token`: The access token for your oneapi website. See more details in [OneAPI API](https://github.com/songquanpeng/one-api/blob/main/docs/API.md)
 - `oneapi_channel_url`: The cursor-api reverse proxy server like [cursor-api](https://github.com/lvguanjun/cursor-api)
 
+### [Test] Clean up low quota Cursor account in OneAPI
+
+```
+python tokenManager/oneapi_cursor.py --oneapi_url {oneapi_url} --oneapi_token {oneapi_token}
+```
+- `oneapi_url`: The web address for your oneapi server. 
+- `oneapi_token`: The access token for your oneapi website. See more details in [OneAPI API](https://github.com/songquanpeng/one-api/blob/main/docs/API.md)
+
 ## Run in Github Action
 
 ### Register accounts. Download account info and cookie token from Github Artifact.
 
-If you want to use the token directly or your OneAPI does not have a public IP, you can manually download token.csv after running the GitHub Action pipeline. **Do not forget to delete the artifact after you download it to avoid data leakage.**
+If you want to use the token directly or your OneAPI does not have a public IP, you can manually download `token.csv` after running the GitHub Action pipeline. **Do not forget to delete the artifact after you download it to avoid data leakage.**
 
 Please run the Github Action pipeline with the following parameter:
 - `number`: The account number you want to register.
