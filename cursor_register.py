@@ -14,6 +14,8 @@ CURSOR_LOGIN_URL = "https://authenticator.cursor.sh"
 CURSOR_SIGN_UP_URL =  "https://authenticator.cursor.sh/sign-up"
 CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
 
+hide_account_info = os.getenv('HIDE_ACCOUNT_INFO', 'false').lower() == 'true'
+
 def cursor_turnstile(tab, retry_times = 5):
     for _ in range(retry_times): # Retry times
         challenge_shadow_root = tab.ele('@id=cf-turnstile', timeout=30).child().shadow_root
@@ -22,6 +24,8 @@ def cursor_turnstile(tab, retry_times = 5):
             challenge_shadow_button.click()
             tab.wait.load_start()
             break
+        if _ == retry_times - 1:
+            print("[Register] Timeout when passing turnstile")
 
 def sign_up(browser):
 
@@ -58,6 +62,7 @@ def sign_up(browser):
 
         # Kill the function since time out 
         if _ == retry_times -1:
+            print("[Register] Timeout when inputing email address")
             return None
     
     # Input password
@@ -80,6 +85,7 @@ def sign_up(browser):
 
         # Kill the function since time out 
         if _ == retry_times -1:
+            print("[Register] Timeout when inputing password")
             return None
 
     # Input email verification code
@@ -101,9 +107,10 @@ def sign_up(browser):
     token = cookies.get('WorkosCursorSessionToken', None)
     tab.close()
 
-    print("[Register] Cursor Email: " + email)
-    print("[Register] Cursor Password: " + password)
-    print("[Register] Cursor Token: " + token)
+    if not hide_account_info:
+        print("[Register] Cursor Email: " + email)
+        print("[Register] Cursor Password: " + password)
+        print("[Register] Cursor Token: " + token)
     return {
         'username': email,
         'password': password,
@@ -131,7 +138,7 @@ def register_cursor(number, max_workers):
     browser.quit(force=True)
 
     results = [result for result in results if result["token"] is not None]
-    print(results)
+    #print(results)
     if len(results)>0:
         formatted_date = datetime.now().strftime("%Y-%m-%d")
 
