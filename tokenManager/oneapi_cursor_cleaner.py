@@ -10,7 +10,7 @@ class Cursor:
         pass
 
     @classmethod
-    def get_remaining_quota(cls, token):
+    def get_remaining_balance(cls, token):
         user = token.split("%3A%3A")[0]
         url = f"https://www.cursor.com/api/usage?user={user}"
 
@@ -56,9 +56,9 @@ if __name__ == "__main__":
     # Remove channel with low quota
     for id in channels_id:
         key = oneapi.get_channel(id).json()['data']['key']
-        remaining_quota = Cursor.get_remaining_quota(key)
+        remaining_balance = Cursor.get_remaining_balance(key)
         remaining_days = Cursor.get_trial_remaining_days(key)
-        print(f"[OneAPI] Channel {id} Info: Quota = {remaining_quota}. Trial Remaining Days = {remaining_days}")
-        if remaining_quota < 10:# or remaining_days <= 0:
+        print(f"[OneAPI] Channel {id} Info: Quota = {remaining_balance}. Trial Remaining Days = {remaining_days}")
+        if remaining_balance < 10:# or remaining_days <= 0:
             quota = oneapi.delete_channel(id)
             print(f"[OneAPI] Channel {id} Is Deleted.")
