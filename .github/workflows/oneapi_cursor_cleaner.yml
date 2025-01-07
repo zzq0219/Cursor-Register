@@ -11,6 +11,6 @@ jobs:
       - name: Install requirements
         run: |
           pip3 install -r ./requirements.txt
-      - name: Run script for csv
+      - name: Run script
         run: |
           python3 ./tokenManager/oneapi_cursor_cleaner.py --oneapi_url "${{ secrets.CURSOR_ONEAPI_URL }}" --oneapi_token "${{ secrets.CURSOR_ONEAPI_TOKEN }}"
