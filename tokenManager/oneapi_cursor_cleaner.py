@@ -6,9 +6,6 @@ from oneapi_manager import OneAPIManager
 
 class Cursor:
 
-    def __init__():
-        pass
-
     @classmethod
     def get_remaining_balance(cls, token):
         user = token.split("%3A%3A")[0]
@@ -19,12 +16,13 @@ class Cursor:
             "Cookie": f"WorkosCursorSessionToken={token}"
         }
         response = requests.get(url, headers=headers)
-        usage = response.json()["gpt-4"]
+        usage = response.json().get("gpt-4", None)
+        if usage is None or "maxRequestUsage" not in usage or "numRequests" not in usage:
+            return -1
         return usage["maxRequestUsage"] - usage["numRequests"]
 
     @classmethod
     def get_trial_remaining_days(cls, token):
-        user = token.split("%3A%3A")[0]
         url = f"https://www.cursor.com/api/auth/stripe"
 
         headers = {
@@ -34,7 +32,6 @@ class Cursor:
         response = requests.get(url, headers=headers)
         remaining_days = response.json().get("daysRemainingOnTrial", -1)
         return remaining_days
-
 
 if __name__ == "__main__":
 
@@ -59,6 +56,9 @@ if __name__ == "__main__":
         remaining_balance = Cursor.get_remaining_balance(key)
         remaining_days = Cursor.get_trial_remaining_days(key)
         print(f"[OneAPI] Channel {id} Info: Balance = {remaining_balance}. Trial Remaining Days = {remaining_days}")
+        if remaining_balance == -1 or remaining_days == -1:
+            print(f"[OneAPI] Invalid resposne")
+            continue
         if remaining_balance < 10:# or remaining_days <= 0:
-            quota = oneapi.delete_channel(id)
+            response = oneapi.delete_channel(id)
             print(f"[OneAPI] Channel {id} Is Deleted.")
