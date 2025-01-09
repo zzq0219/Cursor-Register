@@ -1,4 +1,5 @@
 DrissionPage
 faker
+tempmail-python
 temp_mails
 beautifulsoup4
