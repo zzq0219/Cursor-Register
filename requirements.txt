@@ -1,3 +1,5 @@
 DrissionPage
-tempmail-python
 faker
+tempmail-python
+temp_mails
+beautifulsoup4
