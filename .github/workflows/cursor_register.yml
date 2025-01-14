@@ -20,10 +20,10 @@ jobs:
     runs-on: windows-latest
     env:
       HIDE_ACCOUNT_INFO: "true"
+      ENABLE_BROWSER_LOG: "false"
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - name: Install requirements
