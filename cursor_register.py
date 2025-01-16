@@ -44,8 +44,11 @@ def cursor_turnstile(tab, retry_times = 5):
 def sign_up(options):
 
     def wait_for_new_email_thread(mail, queue, timeout=300):
-        data = mail.wait_for_new_email(delay=1, timeout=timeout)
-        queue.put(copy.deepcopy(data))
+        try:
+            data = mail.wait_for_new_email(delay=1, timeout=timeout)
+            queue.put(copy.deepcopy(data))
+        except Exception as e:
+            queue.put(None)
 
     # Maybe fail to open the browser
     try:
@@ -199,7 +202,13 @@ def sign_up(options):
             return None
 
     # Get cookie
-    cookies = tab.cookies().as_dict()
+    try:
+        cookies = tab.cookies().as_dict()
+    except e:
+        print(f"[Register][{thread_id}] Fail to get cookie.")
+        if not enable_browser_log: browser.quit(force=True, del_data=True)
+        return None
+
     token = cookies.get('WorkosCursorSessionToken', None)
     if enable_register_log:
         if token is not None:
