@@ -35,11 +35,12 @@ def handle_oneapi_cursor_channel(oneapi: OneAPIManager,
     response_time = data['response_time']
     remaining_balance = Cursor.get_remaining_balance(key)
     remaining_days = Cursor.get_trial_remaining_days(key)
-    print(f"[OneAPI] Channel {channel_id} Info: Balance = {remaining_balance}. Trial Remaining Days = {remaining_days}. Response Time = {response_time}")
 
     if None in [remaining_balance, remaining_days]:
-        print(f"[OneAPI] Invalid resposne")
+        print(f"[OneAPI] Channel {channel_id} Info: Invalid resposne")
         return None
+    
+    print(f"[OneAPI] Channel {channel_id} Info: Balance = {remaining_balance}. Trial Remaining Days = {remaining_days}. Response Time = {response_time}")
 
     if remaining_balance < low_balance_threshold \
         or (test_time != 0 and response_time < 1000): # or remaining_days <= 0:
