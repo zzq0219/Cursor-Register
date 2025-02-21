@@ -1,236 +1,62 @@
 import os
-import re
 import csv
 import copy
-import queue
 import argparse
-import threading
 import concurrent.futures
+import hydra
 from faker import Faker
 from datetime import datetime
-
+from omegaconf import DictConfig
 from DrissionPage import ChromiumOptions, Chromium
+
 from temp_mails import Tempmail_io, Guerillamail_com
-
-CURSOR_URL = "https://www.cursor.com/"
-CURSOR_SIGN_IN_URL = "https://authenticator.cursor.sh"
-CURSOR_PASSWORD_URL = "https://authenticator.cursor.sh/password"
-CURSOR_MAGAIC_CODE_URL = "https://authenticator.cursor.sh/magic-code"
-CURSOR_SIGNUP_URL =  "https://authenticator.cursor.sh/sign-up"
-CURSOR_SIGNUP_PASSWORD_URL = "https://authenticator.cursor.sh/sign-up/password"
-CURSOR_EMAIL_VERIFICATION_URL = "https://authenticator.cursor.sh/email-verification"
-
-CURSOR_SETTINGS_URL = "https://www.cursor.com/settings"
+from helper.cursor_register import CursorRegister
+from helper.email.temp_mails_wrapper import TempMailsWrapper
+from helper.email.minuteinbox_com import Minuteinboxcom
+from helper.email import EmailServer
 
 # Parameters for debugging purpose
 hide_account_info = os.getenv('HIDE_ACCOUNT_INFO', 'false').lower() == 'true'
-enable_register_log = True
 enable_headless = os.getenv('ENABLE_HEADLESS', 'false').lower() == 'true'
 enable_browser_log = os.getenv('ENABLE_BROWSER_LOG', 'true').lower() == 'true' or not enable_headless
 
-def cursor_turnstile(tab, retry_times = 5):
-    thread_id = threading.current_thread().ident
+def register_cursor_core(options):
 
-    for retry in range(retry_times): # Retry times
-        try:
-            if enable_register_log: print(f"[Register][{thread_id}][{retry}] Passing Turnstile")
-            challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
-            challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=30).ele("tag:body").sr("xpath=//input[@type='checkbox']")
-            if challenge_shadow_button:
-                challenge_shadow_button.click()
-                tab.wait.load_start()
-                break
-        except:
-            pass
-        if retry == retry_times - 1:
-            print("[Register] Timeout when passing turnstile")
-
-def sign_up(options):
-
-    def wait_for_new_email_thread(mail, queue, timeout=300):
-        try:
-            data = mail.wait_for_new_email(delay=1, timeout=timeout)
-            queue.put(copy.deepcopy(data))
-        except Exception as e:
-            queue.put(None)
-
-    # Maybe fail to open the browser
     try:
+        # Maybe fail to open the browser
         browser = Chromium(options)
     except Exception as e:
         print(e)
         return None
 
-    retry_times = 5
-    thread_id = threading.current_thread().ident
+    # Opiton 1: Use temp_mails library
+    #temp_email = Guerillamail_com()
+    #email_server = TempMailsWrapper(temp_email)
+    # Option 2: Use custom email server
+    email_server = Minuteinboxcom(browser)
 
-    fake = Faker()
-    
-    # Get temp email address
-    #mail = Tempmail_io()
-    mail = Guerillamail_com()
-    email = mail.email
-    password = fake.password(length=12, special_chars=True, digits=True, upper_case=True, lower_case=True)
+    # Get email address
+    email = email_server.get_email_address()
 
-    email_queue = queue.Queue()
-    email_thread = threading.Thread(target=wait_for_new_email_thread,
-                                    args=(mail, email_queue, ), 
-                                    daemon=True)
-    email_thread.start()
+    register = CursorRegister(browser, email_server)
+    tab_signin, status = register.sign_in(email)
+    #tab_signin, status = register.sign_up(email)
 
-    tab = browser.new_tab(CURSOR_SIGNUP_URL)
-    # Input email
-    for retry in range(retry_times):
-        try:
-            if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input email")
-            tab.ele("xpath=//input[@name='email']").input(email, clear=True)
-            tab.ele("@type=submit").click()
-            
-            # In password page or data is validated, continue to next page
-            if tab.wait.url_change(CURSOR_SIGNUP_PASSWORD_URL, timeout=3):
-                print(f"[Register][{thread_id}] Continue to password page")
-                break
-            # If not in password page, try pass turnstile page
-            if CURSOR_SIGNUP_URL in tab.url and CURSOR_SIGNUP_PASSWORD_URL not in tab.url:
-                if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email page")
-                cursor_turnstile(tab)
+    token = register.get_cursor_cookie(tab_signin)
 
-        except Exception as e:
-            print(f"[Register][{thread_id}] Exception when handlding email page.")
-            print(e)
-        
-        # In password page or data is validated, continue to next page
-        if tab.wait.url_change(CURSOR_SIGNUP_PASSWORD_URL, timeout=5):
-            print(f"[Register][{thread_id}] Continue to password page")
-            break
+    if status or not enable_browser_log:
+        register.browser.quit(force=True, del_data=True)
 
-        tab.refresh()
-        # Kill the function since time out 
-        if retry == retry_times - 1:
-            print(f"[Register][{thread_id}] Timeout when inputing email address")
-            if not enable_browser_log: browser.quit(force=True, del_data=True)
-            return None
-    
-    # Use email sign-in code in password page
-    for retry in range(retry_times):
-        try:
-            if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input password")
-            tab.ele("xpath=//input[@name='password']").input(password, clear=True)
-            tab.ele('@type=submit').click()
-
-            # In code verification page or data is validated, continue to next page
-            if tab.wait.url_change(CURSOR_EMAIL_VERIFICATION_URL, timeout=3):
-                print(f"[Register][{thread_id}] Continue to email code page")
-                break
-            # If not in verification code page, try pass turnstile page
-            if CURSOR_SIGNUP_PASSWORD_URL in tab.url and CURSOR_EMAIL_VERIFICATION_URL not in tab.url:
-                if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for password page")
-                cursor_turnstile(tab)
-
-        except Exception as e:
-            print(f"[Register][{thread_id}] Exception when handling password page.")
-            print(e)
-
-        # In code verification page or data is validated, continue to next page
-        if tab.wait.url_change(CURSOR_EMAIL_VERIFICATION_URL, timeout=5):
-            print(f"[Register][{thread_id}] Continue to email code page")
-            break
-
-        if tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
-            print(f"[Register][{thread_id}][Error] Sign up is restricted.")
-            if not enable_browser_log: browser.quit(force=True, del_data=True)
-            return None
-
-        tab.refresh()
-        # Kill the function since time out 
-        if retry == retry_times - 1:
-            if enable_register_log: print(f"[Register][{thread_id}] Timeout when inputing password")
-            if not enable_browser_log: browser.quit(force=True, del_data=True)
-            return None
-
-    # Get email verification code
-    try:
-        data = email_queue.get(timeout=60)
-        assert data is not None, "Fail to get code from email."
-
-        verify_code = None
-        if "body_text" in data:
-            message_text = data["body_text"]
-            message_text = message_text.replace(" ", "")
-            verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message_text).group(1)
-        elif "preview" in data:
-            message_text = data["preview"]
-            verify_code = re.search(r'Your verification code is (\d{6})\. This code expires', message_text).group(1)
-        # Handle HTML format
-        elif "content" in data:
-            message_text = data["content"]
-            message_text = re.sub(r"<[^>]*>", "", message_text)
-            message_text = re.sub(r"&#8202;", "", message_text)
-            message_text = re.sub(r"&nbsp;", "", message_text)
-            message_text = re.sub(r'[\n\r\s]', "", message_text)
-            verify_code = re.search(r'openbrowserwindow\.(\d{6})Thiscodeexpires', message_text).group(1)
-        assert verify_code is not None, "Fail to get code from email."
-
-    except Exception as e:
-        print(f"[Register][{thread_id}] Fail to get code from email.")
-        if not enable_browser_log: browser.quit(force=True, del_data=True)
-        return None
-
-    # Input email verification code
-    for retry in range(retry_times):
-        try:
-            if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input email verification code")
-
-            for idx, digit in enumerate(verify_code, start = 0):
-                tab.ele(f"xpath=//input[@data-index={idx}]").input(digit, clear=True)
-                tab.wait(0.1, 0.3)
-            tab.wait(0.5, 1.5)
-
-        except Exception as e:
-            print(f"[Register][{thread_id}] Exception when handling email code page.")
-            print(e)
-
-
-        if tab.url != CURSOR_URL:
-            if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email code page.")
-            cursor_turnstile(tab)
-
-        if tab.wait.url_change(CURSOR_URL, timeout=3):
-            break
-
-        tab.refresh()
-
-        # Kill the function since time out 
-        if retry == retry_times - 1:
-            if enable_register_log: print(f"[Register][{thread_id}] Timeout when inputing email verification code")
-            if not enable_browser_log: browser.quit(force=True, del_data=True)
-            return None
-
-    # Get cookie
-    try:
-        cookies = tab.cookies().as_dict()
-    except e:
-        print(f"[Register][{thread_id}] Fail to get cookie.")
-        if not enable_browser_log: browser.quit(force=True, del_data=True)
-        return None
-
-    token = cookies.get('WorkosCursorSessionToken', None)
-    if enable_register_log:
-        if token is not None:
-            print(f"[Register][{thread_id}] Register Account Successfully.")
-        else:
-            print(f"[Register][{thread_id}] Register Account Failed.")
-
-    if not hide_account_info:
+    if status and not hide_account_info:
         print(f"[Register] Cursor Email: {email}")
         print(f"[Register] Cursor Token: {token}")
 
-    browser.quit(force=True, del_data=True)
-
-    return {
-        'username': email,
-        'token': token
+    ret = {
+        "username": email,
+        "token": token
     }
+
+    return ret
 
 def register_cursor(number, max_workers):
 
@@ -238,7 +64,8 @@ def register_cursor(number, max_workers):
     options.auto_port()
     options.new_env()
     # Use turnstilePatch from https://github.com/TheFalloutOf76/CDP-bug-MouseEvent-.screenX-.screenY-patcher
-    options.add_extension("turnstilePatch")
+    turnstile_patch_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "turnstilePatch"))
+    options.add_extension(turnstile_patch_path)
 
     # If fail to pass the cloudflare in headless mode, try to align the user agent with your real browser
     if enable_headless: 
@@ -257,7 +84,7 @@ def register_cursor(number, max_workers):
     # Run the code using multithreading
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(sign_up, copy.deepcopy(options)) for _ in range(number)]
+        futures = [executor.submit(register_cursor_core, copy.deepcopy(options)) for _ in range(number)]
         for future in concurrent.futures.as_completed(futures):
             result = future.result()
             if result is not None:
@@ -284,43 +111,36 @@ def register_cursor(number, max_workers):
 
     return results
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description='Cursor Registor')
-    parser.add_argument('--number', type=int, default=2, help="How many account you want")
-    parser.add_argument('--max_workers', type=int, default=1, help="How many workers in multithreading")
-    
-    # The parameters with name starts with oneapi are used to uploead the cookie token to one-api, new-api, chat-api server.
-    parser.add_argument('--oneapi', action='store_true', help='Enable One-API or not')
-    parser.add_argument('--oneapi_url', type=str, required=False, help='URL link for One-API website')
-    parser.add_argument('--oneapi_token', type=str, required=False, help='Token for One-API website')
-    parser.add_argument('--oneapi_channel_url', type=str, required=False, help='Base url for One-API channel')
-
-    args = parser.parse_args()
-    number = args.number
-    max_workers = args.max_workers
-    use_oneapi = args.oneapi
-    oneapi_url = args.oneapi_url
-    oneapi_token = args.oneapi_token
-    oneapi_channel_url = args.oneapi_channel_url
-
+@hydra.main(config_path="config", config_name="config", version_base=None)
+def main(config: DictConfig):
+    number = config.register.number
+    max_workers = config.register.max_workers
     print(f"[Register] Start to register {number} accounts in {max_workers} threads")
+
     account_infos = register_cursor(number, max_workers)
     tokens = list(set([row['token'] for row in account_infos]))
     print(f"[Register] Register {len(tokens)} accounts successfully")
     
-    if use_oneapi and len(account_infos) > 0:
+    if config.oneapi.enabled and len(account_infos) > 0:
         from tokenManager.oneapi_manager import OneAPIManager
         from tokenManager.cursor import Cursor
-        oneapi = OneAPIManager(oneapi_url, oneapi_token)
 
+        oneapi_url = config.oneapi.url
+        oneapi_token = config.oneapi.token
+        oneapi_channel_url = config.oneapi.channel_url
+
+        oneapi = OneAPIManager(oneapi_url, oneapi_token)
         # Send request by batch to avoid "Too many SQL variables" error in SQLite.
         # If you use MySQL, better to set the batch_size as len(tokens)
         batch_size = 10
         for idx, i in enumerate(range(0, len(tokens), batch_size), start=1):
             batch = tokens[i:i + batch_size]
-            response = oneapi.add_channel("Cursor",
-                                          oneapi_channel_url,
-                                          '\n'.join(batch),
-                                          Cursor.models)
+            response = oneapi.add_channel(name = "Cursor",
+                                          base_url = oneapi_channel_url,
+                                          key = '\n'.join(batch),
+                                          models = Cursor.models,
+                                          tags = "Cursor")
             print(f'[OneAPI] Add Channel Request For Batch {idx}. Status Code: {response.status_code}, Response Body: {response.json()}')
+
+if __name__ == "__main__":
+    main()
