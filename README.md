@@ -54,7 +54,7 @@ register:
   temp_email_server:
     name: Minuteinboxcom
 ```
--`register.temp_email_server.name`: Which temp email you are using
+- `register.temp_email_server.name`: Which temp email you are using
 
 #### IMAP email server configuration
 
