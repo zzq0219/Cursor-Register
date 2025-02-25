@@ -8,6 +8,8 @@ class Cursor:
         "claude-3-opus",
         "claude-3-haiku-200k",
         'claude-3.5-haiku', 
+        "claude-3.7-sonnet",
+        "claude-3.7-sonnet-thinking",
         "cursor-fast",
         "cursor-small",
         "deepseek-r1",
